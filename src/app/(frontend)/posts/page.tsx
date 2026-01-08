@@ -1,63 +1,52 @@
-import type { Metadata } from 'next/types'
-
-import { CollectionArchive } from '@/components/CollectionArchive'
-import { PageRange } from '@/components/PageRange'
-import { Pagination } from '@/components/Pagination'
-import configPromise from '@payload-config'
+import Link from 'next/link'
 import { getPayload } from 'payload'
-import React from 'react'
-import PageClient from './page.client'
+import configPromise from '@payload-config'
 
-export const dynamic = 'force-static'
-export const revalidate = 600
+export const revalidate = 60
 
-export default async function Page() {
+export default async function PostsPage() {
   const payload = await getPayload({ config: configPromise })
 
   const posts = await payload.find({
     collection: 'posts',
-    depth: 1,
-    limit: 12,
+    draft: false,
+    limit: 20,
+    sort: '-createdAt',
     overrideAccess: false,
-    select: {
-      title: true,
-      slug: true,
-      categories: true,
-      meta: true,
-    },
+    depth: 0,
   })
 
   return (
-    <div className="pt-24 pb-24">
-      <PageClient />
-      <div className="container mb-16">
-        <div className="prose dark:prose-invert max-w-none">
-          <h1>Posts</h1>
+    <main className="container py-10">
+      <div className="mb-8">
+        <h1 className="text-4xl font-extrabold">Crypto News</h1>
+        <p className="mt-2 opacity-70">Najnoviji članci i analize.</p>
+      </div>
+
+      <div className="grid gap-4">
+        {posts.docs.map((post: any) => (
+          <article key={post.id} className="rounded-xl border border-white/10 p-5">
+            <h2 className="text-xl font-semibold">
+              <Link href={`/posts/${post.slug}`} className="hover:underline">
+                {post.title}
+              </Link>
+            </h2>
+
+            {post.excerpt ? <p className="mt-2 opacity-80">{post.excerpt}</p> : null}
+
+            <div className="mt-3 text-sm opacity-60">
+              {post.createdAt ? String(post.createdAt).split('T')[0] : ''}
+            </div>
+          </article>
+        ))}
+      </div>
+
+      {posts.totalPages > 1 ? (
+        <div className="mt-8 text-sm opacity-70">
+          Stranica {posts.page ?? 1} / {posts.totalPages}
+          {/* Pagination možemo dodati poslije */}
         </div>
-      </div>
-
-      <div className="container mb-8">
-        <PageRange
-          collection="posts"
-          currentPage={posts.page}
-          limit={12}
-          totalDocs={posts.totalDocs}
-        />
-      </div>
-
-      <CollectionArchive posts={posts.docs} />
-
-      <div className="container">
-        {posts.totalPages > 1 && posts.page && (
-          <Pagination page={posts.page} totalPages={posts.totalPages} />
-        )}
-      </div>
-    </div>
+      ) : null}
+    </main>
   )
-}
-
-export function generateMetadata(): Metadata {
-  return {
-    title: `Payload Website Template Posts`,
-  }
 }

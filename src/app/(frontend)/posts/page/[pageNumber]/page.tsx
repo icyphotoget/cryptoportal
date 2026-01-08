@@ -1,88 +1,86 @@
-import type { Metadata } from 'next/types'
-
-import { CollectionArchive } from '@/components/CollectionArchive'
-import { PageRange } from '@/components/PageRange'
-import { Pagination } from '@/components/Pagination'
-import configPromise from '@payload-config'
-import { getPayload } from 'payload'
-import React from 'react'
-import PageClient from './page.client'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { getPayload } from 'payload'
+import configPromise from '@payload-config'
 
-export const revalidate = 600
+export const revalidate = 60
 
-type Args = {
-  params: Promise<{
-    pageNumber: string
-  }>
-}
+export default async function PostsPageNumber({
+  params,
+}: {
+  params: Promise<{ pageNumber: string }>
+}) {
+  const { pageNumber } = await params
+  const page = Number(pageNumber)
 
-export default async function Page({ params: paramsPromise }: Args) {
-  const { pageNumber } = await paramsPromise
+  if (!Number.isFinite(page) || page < 1) return notFound()
+
   const payload = await getPayload({ config: configPromise })
-
-  const sanitizedPageNumber = Number(pageNumber)
-
-  if (!Number.isInteger(sanitizedPageNumber)) notFound()
 
   const posts = await payload.find({
     collection: 'posts',
-    depth: 1,
-    limit: 12,
-    page: sanitizedPageNumber,
+    draft: false,
+    limit: 20,
+    page,
+    sort: '-createdAt',
     overrideAccess: false,
+    depth: 0,
   })
+
+  if (posts.totalPages > 0 && page > posts.totalPages) return notFound()
 
   return (
-    <div className="pt-24 pb-24">
-      <PageClient />
-      <div className="container mb-16">
-        <div className="prose dark:prose-invert max-w-none">
-          <h1>Posts</h1>
+    <main className="container py-10">
+      <div className="mb-8">
+        <h1 className="text-4xl font-extrabold">Crypto News</h1>
+        <p className="mt-2 opacity-70">
+          Stranica {posts.page ?? page} / {posts.totalPages || 1}
+        </p>
+      </div>
+
+      <div className="grid gap-4">
+        {posts.docs.map((post: any) => (
+          <article key={post.id} className="rounded-xl border border-white/10 p-5">
+            <h2 className="text-xl font-semibold">
+              <Link href={`/posts/${post.slug}`} className="hover:underline">
+                {post.title}
+              </Link>
+            </h2>
+
+            {post.excerpt ? <p className="mt-2 opacity-80">{post.excerpt}</p> : null}
+
+            <div className="mt-3 text-sm opacity-60">
+              {post.createdAt ? String(post.createdAt).split('T')[0] : ''}
+            </div>
+          </article>
+        ))}
+      </div>
+
+      {posts.totalPages > 1 ? (
+        <div className="mt-10 flex items-center justify-between text-sm">
+          <div className="opacity-70">
+            Stranica {posts.page ?? page} / {posts.totalPages}
+          </div>
+
+          <div className="flex gap-4">
+            {page > 1 ? (
+              <Link className="hover:underline" href={page - 1 === 1 ? `/posts` : `/posts/page/${page - 1}`}>
+                ← Previous
+              </Link>
+            ) : (
+              <span className="opacity-30">← Previous</span>
+            )}
+
+            {posts.totalPages && page < posts.totalPages ? (
+              <Link className="hover:underline" href={`/posts/page/${page + 1}`}>
+                Next →
+              </Link>
+            ) : (
+              <span className="opacity-30">Next →</span>
+            )}
+          </div>
         </div>
-      </div>
-
-      <div className="container mb-8">
-        <PageRange
-          collection="posts"
-          currentPage={posts.page}
-          limit={12}
-          totalDocs={posts.totalDocs}
-        />
-      </div>
-
-      <CollectionArchive posts={posts.docs} />
-
-      <div className="container">
-        {posts?.page && posts?.totalPages > 1 && (
-          <Pagination page={posts.page} totalPages={posts.totalPages} />
-        )}
-      </div>
-    </div>
+      ) : null}
+    </main>
   )
-}
-
-export async function generateMetadata({ params: paramsPromise }: Args): Promise<Metadata> {
-  const { pageNumber } = await paramsPromise
-  return {
-    title: `Payload Website Template Posts Page ${pageNumber || ''}`,
-  }
-}
-
-export async function generateStaticParams() {
-  const payload = await getPayload({ config: configPromise })
-  const { totalDocs } = await payload.count({
-    collection: 'posts',
-    overrideAccess: false,
-  })
-
-  const totalPages = Math.ceil(totalDocs / 10)
-
-  const pages: { pageNumber: string }[] = []
-
-  for (let i = 1; i <= totalPages; i++) {
-    pages.push({ pageNumber: String(i) })
-  }
-
-  return pages
 }
