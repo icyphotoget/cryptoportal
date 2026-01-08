@@ -1,0 +1,32 @@
+import Link from 'next/link'
+
+export default function SubscribePage() {
+  return (
+    <main className="mx-auto max-w-2xl px-4 py-10">
+      <h1 className="text-3xl font-extrabold">Subscribe</h1>
+      <p className="mt-3 opacity-75">
+        Ovo je demo subscribe stranica. Kasnije ovdje možeš spojiti newsletter (Mailchimp/Beehiiv) ili Payload formu.
+      </p>
+
+      <div className="mt-6 rounded-2xl border border-border p-5">
+        <p className="text-sm opacity-75">Za sada samo primjer:</p>
+        <div className="mt-4 flex gap-3">
+          <input
+            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+            placeholder="email@primjer.com"
+          />
+          <button className="rounded-xl bg-foreground px-4 py-2 text-sm font-semibold text-background opacity-60">
+            Join
+          </button>
+        </div>
+        <p className="mt-3 text-xs opacity-60">
+          (Nije spojeno, samo UI. Kad želiš, spojimo pravi newsletter.)
+        </p>
+      </div>
+
+      <Link href="/" className="mt-6 inline-block text-sm opacity-80 hover:opacity-100">
+        ← Back to home
+      </Link>
+    </main>
+  )
+}
