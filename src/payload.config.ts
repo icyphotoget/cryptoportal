@@ -1,19 +1,27 @@
+import path from 'path'
+import { fileURLToPath } from 'url'
 import { buildConfig } from 'payload'
-import { postgresAdapter } from '@payloadcms/db-postgres'
+import sharp from 'sharp'
+
+import pg from 'pg'
+import { neonConfig, Pool as NeonPool } from '@neondatabase/serverless'
+
+neonConfig.fetchConnectionCache = true
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 export default buildConfig({
-  serverURL: process.env.NEXT_PUBLIC_SERVER_URL || '',
   admin: {
     user: 'users',
   },
+
+  // collections ostaju iste kakve ima template
   collections: [
     {
       slug: 'users',
       auth: true,
-      fields: [
-        { name: 'email', type: 'email', required: true },
-        { name: 'password', type: 'password', required: true },
-      ],
+      fields: [],
     },
     {
       slug: 'posts',
@@ -22,32 +30,33 @@ export default buildConfig({
         { name: 'slug', type: 'text', required: true },
         { name: 'content', type: 'textarea', required: true },
         {
-          name: 'meta',
-          type: 'group',
-          fields: [
-            {
-              name: 'image',
-              type: 'upload',
-              relationTo: 'media',
-            },
-          ],
+          name: 'heroImage',
+          type: 'upload',
+          relationTo: 'media',
         },
       ],
     },
     {
-      slug: 'markets',
+      slug: 'media',
+      upload: {
+        staticDir: path.join(__dirname, 'media'),
+      },
       fields: [
-        { name: 'name', type: 'text', required: true },
-        { name: 'symbol', type: 'text', required: true },
+        { name: 'alt', type: 'text' },
       ],
     },
   ],
-  db: postgresAdapter({
-    pool: {
-      connectionString: process.env.DATABASE_URL || '',
-    },
-  }),
+
+  globals: [],
+
+  sharp,
+
+  // ✅ Neon Postgres konekcija
+  db: new NeonPool({
+    connectionString: process.env.DATABASE_URL,
+  }) as unknown as pg.Pool,
+
   typescript: {
-    outputFile: 'src/payload-types.ts',
+    outputFile: path.resolve(__dirname, 'payload-types.ts'),
   },
 })
